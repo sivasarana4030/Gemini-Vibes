@@ -1,0 +1,96 @@
+<script>
+const g = document.getElementById('g1');
+const g2 = document.getElementById('g2');
+const speedRange = document.getElementById('speedRange');
+const pauseBtn = document.getElementById('pauseBtn');
+const toggleOverlay = document.getElementById('toggleOverlay');
+const overlay = document.getElementById('overlay');
+const chatBody = document.getElementById('chatBody');
+const inputBox = document.querySelector('.input');
+let paused = false;
+
+// === GEMINI CONFIG ===
+const GEMINI_API_KEY = "AIzaSyB6R0fUeqWhqaDJSnQN1l6E97d6EQ2wTT0";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY;
+
+// Speed control
+speedRange.addEventListener('input', e=>{
+  const v = Number(e.target.value);
+  g.style.animationDuration = v + 's';
+  g2.style.animationDuration = (v*1.6) + 's';
+});
+
+// Pause control
+pauseBtn.addEventListener('click', ()=>{
+  paused = !paused;
+  if(paused){
+    g.style.animationPlayState = 'paused';
+    g2.style.animationPlayState = 'paused';
+    document.querySelectorAll('.blob').forEach(b=>b.style.animationPlayState='paused');
+    pauseBtn.textContent = 'Play';
+  } else {
+    g.style.animationPlayState = 'running';
+    g2.style.animationPlayState = 'running';
+    document.querySelectorAll('.blob').forEach(b=>b.style.animationPlayState='running');
+    pauseBtn.textContent = 'Pause';
+  }
+});
+
+toggleOverlay.addEventListener('click', ()=>{
+  overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+});
+
+// Send message function
+async function sendMessage(msg) {
+  // Add user message
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg user';
+  userDiv.textContent = msg;
+  chatBody.appendChild(userDiv);
+  chatBody.scrollTop = chatBody.scrollHeight;
+
+  // Send to Gemini API
+  try {
+    const res = await fetch(GEMINI_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: msg }] }]
+      })
+    });
+
+    const data = await res.json();
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[No response]";
+    
+    // Add AI response
+    const botDiv = document.createElement('div');
+    botDiv.className = 'msg bot';
+    botDiv.textContent = aiText;
+    chatBody.appendChild(botDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  } catch (err) {
+    const botDiv = document.createElement('div');
+    botDiv.className = 'msg bot';
+    botDiv.textContent = "Error: " + err.message;
+    chatBody.appendChild(botDiv);
+  }
+}
+
+// Handle send button
+document.querySelector('.mock-footer button').addEventListener('click', ()=>{
+  const msg = inputBox.textContent.trim();
+  if(msg) {
+    inputBox.textContent = "";
+    sendMessage(msg);
+  }
+});
+
+// Gentle random drift in hues
+setInterval(()=>{
+  const h1 = Math.floor(180 + Math.random()*120);
+  const h2 = Math.floor(210 + Math.random()*120);
+  g.style.background = `conic-gradient(from 120deg at 50% 50%, hsla(${h1},85%,62%,0.18), hsla(${h2},85%,62%,0.18), rgba(79,255,196,0.18), hsla(${h1},85%,62%,0.18))`;
+}, 7000);
+
+speedRange.dispatchEvent(new Event('input'));
+</script>
